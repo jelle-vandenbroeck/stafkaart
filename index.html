@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#15803d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Wandel-app Offline</title>
+  <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIldhbmRlbC1hcHAgT2ZmbGluZSIsCiAgInNob3J0X25hbWUiOiAiV2FuZGVsZW4iLAogICJzdGFydF91cmwiOiAiLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiMxNTgwM2QiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsJTNDc3ZnJTIweG1sbnMlM0QnaHR0cCUzQSUyRiUyRnd3dy53My5vcmclMkYyMDAwJTJGc3ZnJyUyMHZpZXdCb3glM0QnMCUyMDAlMjA1MTIlMjA1MTInJTNFJTNDcmVjdCUyMGZpbGwlM0QnJTIzMTU4MDNkJyUyMHdpZHRoJTNEJzUxMiclMjBoZWlnaHQlM0QnNTEyJyUyRiUzRSUzQ3RleHQlMjB4JTNEJzUwJTI1JyUyMHklM0QnNTAlMjUnJTIwZm9udC1zaXplJTNEJzMwMCclMjBmaWxsJTNEJyUyM2ZmZiclMjB0ZXh0LWFuY2hvciUzRCdtaWRkbGUnJTIwZG9taW5hbnQtYmFzZWxpbmUlM0QnbWlkZGxlJyUzRSVGMCU5RiVBNSVCRSUzQyUyRnRleHQlM0UlM0MlMkZzdmclM0UiLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+    }
+    
+    #map {
+      height: 100vh;
+      width: 100vw;
+      z-index: 0;
+    }
+    
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+    
+    .btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    
+    .btn svg {
+      width: 24px;
+      height: 24px;
+    }
+    
+    .btn.active {
+      background: #3b82f6;
+    }
+    
+    .btn.active svg {
+      stroke: white;
+    }
+    
+    .settings-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      padding: 16px;
+      z-index: 1000;
+      min-width: 240px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .settings-panel h3 {
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: #1f2937;
+    }
+    
+    .layer-btn {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border: none;
+      border-radius: 8px;
+      background: #f3f4f6;
+      color: #1f2937;
+      cursor: pointer;
+      text-align: left;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .layer-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .layer-btn.active {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .info-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #15803d;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      z-index: 1000;
+      font-size: 14px;
+    }
+    
+    .info-bar small {
+      display: block;
+      margin-top: 4px;
+      opacity: 0.9;
+      font-size: 11px;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    .offline-indicator {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: #dc2626;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .offline-indicator.online {
+      background: #16a34a;
+    }
+    
+    /* Leaflet popup styling */
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  
+  <div class="offline-indicator online" id="connectionStatus">
+    <span id="statusText">Online</span>
+  </div>
+  
+  <div class="controls">
+    <button class="btn" id="locationBtn" title="Locatie tracking aan/uit">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+    </button>
+    
+    <button class="btn" id="centerBtn" title="Centreer op locatie">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+      </svg>
+    </button>
+    
+    <button class="btn" id="layersBtn" title="Kaartlagen">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+        <polyline points="2 17 12 22 22 17"/>
+        <polyline points="2 12 12 17 22 12"/>
+      </svg>
+    </button>
+    
+    <button class="btn" id="downloadBtn" title="Download gebied">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </button>
+  </div>
+  
+  <div class="settings-panel hidden" id="settingsPanel">
+    <h3>Selecteer Kaartlaag</h3>
+    <button class="layer-btn active" data-layer="osm">OpenStreetMap</button>
+    <button class="layer-btn" data-layer="topo">Topografisch (OpenTopoMap)</button>
+    <button class="layer-btn" data-layer="cycle">Fiets/Wandelkaart</button>
+    <button class="layer-btn" data-layer="satellite">Satelliet (ESRI)</button>
+  </div>
+  
+  <div class="info-bar">
+    <strong>🥾 Wandel-app Offline</strong>
+    <small id="infoText">Installeer als app voor beste ervaring</small>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Service Worker registratie
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE_NAME = 'wandel-app-v1';
+        const urlsToCache = ['/'];
+        
+        self.addEventListener('install', event => {
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then(cache => cache.addAll(urlsToCache))
+          );
+        });
+        
+        self.addEventListener('fetch', event => {
+          event.respondWith(
+            caches.match(event.request)
+              .then(response => {
+                if (response) return response;
+                return fetch(event.request).then(response => {
+                  if (!response || response.status !== 200) return response;
+                  const responseToCache = response.clone();
+                  caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseToCache);
+                  });
+                  return response;
+                });
+              })
+          );
+        });
+      `;
+      
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      
+      navigator.serviceWorker.register(swUrl)
+        .then(() => console.log('Service Worker geregistreerd'))
+        .catch(err => console.error('Service Worker fout:', err));
+    }
+
+    // Leaflet map initialisatie
+    const map = L.map('map', {
+      zoomControl: false
+    }).setView([51.0, 4.0], 13);
+
+    // Kaartlagen
+    const mapLayers = {
+      osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }),
+      topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: '© OpenTopoMap'
+      }),
+      cycle: L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+        attribution: '© CyclOSM'
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: '© ESRI'
+      })
+    };
+
+    let currentLayer = 'osm';
+    mapLayers[currentLayer].addTo(map);
+
+    // Locatie tracking variabelen
+    let locationMarker = null;
+    let locationCircle = null;
+    let watchId = null;
+    let trackingEnabled = false;
+
+    // DOM elementen
+    const locationBtn = document.getElementById('locationBtn');
+    const centerBtn = document.getElementById('centerBtn');
+    const layersBtn = document.getElementById('layersBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const infoText = document.getElementById('infoText');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const statusText = document.getElementById('statusText');
+
+    // Toggle locatie tracking
+    locationBtn.addEventListener('click', () => {
+      trackingEnabled = !trackingEnabled;
+      
+      if (trackingEnabled) {
+        locationBtn.classList.add('active');
+        startTracking();
+        infoText.textContent = 'Locatie tracking actief';
+      } else {
+        locationBtn.classList.remove('active');
+        stopTracking();
+        infoText.textContent = 'Locatie tracking uitgeschakeld';
+      }
+    });
+
+    function startTracking() {
+      if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          function(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy;
+            const latlng = [latitude, longitude];
+
+            if (!locationMarker) {
+              locationMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                  className: 'location-marker',
+                  html: '<div style="width:16px;height:16px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>',
+                  iconSize: [16, 16]
+                })
+              }).addTo(map);
+              
+              locationCircle = L.circle(latlng, {
+                radius: accuracy,
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.1,
+                weight: 1
+              }).addTo(map);
+              
+              map.setView(latlng, 16);
+            } else {
+              locationMarker.setLatLng(latlng);
+              locationCircle.setLatLng(latlng);
+              locationCircle.setRadius(accuracy);
+            }
+          },
+          function(error) {
+            console.error('Locatie fout:', error);
+            alert('Kan locatie niet ophalen. Controleer je instellingen.');
+            trackingEnabled = false;
+            locationBtn.classList.remove('active');
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 5000
+          }
+        );
+      }
+    }
+
+    function stopTracking() {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      if (locationMarker) {
+        map.removeLayer(locationMarker);
+        map.removeLayer(locationCircle);
+        locationMarker = null;
+        locationCircle = null;
+      }
+    }
+
+    // Centreer op locatie
+    centerBtn.addEventListener('click', function() {
+      if (locationMarker) {
+        map.setView(locationMarker.getLatLng(), 16);
+      } else if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            map.setView([position.coords.latitude, position.coords.longitude], 16);
+          },
+          function(error) {
+            alert('Kan locatie niet ophalen');
+          }
+        );
+      }
+    });
+
+    // Kaartlagen toggle
+    layersBtn.addEventListener('click', function() {
+      settingsPanel.classList.toggle('hidden');
+    });
+
+    document.querySelectorAll('.layer-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const layer = btn.dataset.layer;
+        
+        map.removeLayer(mapLayers[currentLayer]);
+        currentLayer = layer;
+        mapLayers[currentLayer].addTo(map);
+        
+        document.querySelectorAll('.layer-btn').forEach(function(b) {
+          b.classList.remove('active');
+        });
+        btn.classList.add('active');
+        
+        settingsPanel.classList.add('hidden');
+        infoText.textContent = btn.textContent + ' geselecteerd';
+      });
+    });
+
+    // Download gebied (simulatie)
+    downloadBtn.addEventListener('click', function() {
+      const bounds = map.getBounds();
+      const zoom = map.getZoom();
+      
+      alert('Download gebied voor offline gebruik:\n\nZoom level: ' + zoom + '\nGebied: ' + bounds.toBBoxString() + '\n\nDe tiles worden nu gecached door de Service Worker bij het bekijken.');
+      
+      infoText.textContent = 'Zoom en pan om tiles te cachen';
+    });
+
+    // Online/Offline status
+    function updateConnectionStatus() {
+      if (navigator.onLine) {
+        connectionStatus.classList.add('online');
+        statusText.textContent = 'Online';
+      } else {
+        connectionStatus.classList.remove('online');
+        statusText.textContent = 'Offline';
+      }
+    }
+
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+    updateConnectionStatus();
+
+    // PWA install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      infoText.innerHTML = 'Tik op <strong>Delen > Toevoegen aan beginscherm</strong> om te installeren';
+    });
+
+    window.addEventListener('appinstalled', function() {
+      infoText.textContent = 'App succesvol geïnstalleerd! 🎉';
+      deferredPrompt = null;
+    });
+  </script>
+</body>
+</html>
